@@ -1,71 +1,86 @@
-// MainActivity.kt
 package com.example.gacornews
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.widget.Button
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var db: FirebaseFirestore
-    private lateinit var newsRecyclerView: RecyclerView
-    private lateinit var uploadButton: FloatingActionButton
+
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var newsAdapter: NewsAdapter
     private lateinit var logoutButton: Button
+    private lateinit var fabAddNews: FloatingActionButton
+    private val newsList = mutableListOf<News>()
+    private val db = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth.getInstance()
+    private var newsListener: ListenerRegistration? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Initialize Firestore
-        db = FirebaseFirestore.getInstance()
+        recyclerView = findViewById(R.id.recyclerView)
+        recyclerView.layoutManager = LinearLayoutManager(this)
 
-        // Initialize UI components
-        newsRecyclerView = findViewById(R.id.recyclerView)
-        uploadButton = findViewById(R.id.fab_add_news)
+        newsAdapter = NewsAdapter(newsList) { news -> deleteNews(news) }
+        recyclerView.adapter = newsAdapter
+
         logoutButton = findViewById(R.id.logoutButton)
+        fabAddNews = findViewById(R.id.fab_add_news)
 
-        // Setup RecyclerView
-        newsRecyclerView.layoutManager = LinearLayoutManager(this)
+        logoutButton.setOnClickListener {
+            auth.signOut()
+            Toast.makeText(this, "Berhasil logout", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, LoginActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+        }
 
-        // Load news articles (implement this function as needed)
-        loadNewsArticles()
-
-        // Set click listener for the upload button
-        uploadButton.setOnClickListener {
-            // Start the UploadActivity for adding news
+        fabAddNews.setOnClickListener {
             val intent = Intent(this, UploadActivity::class.java)
             startActivity(intent)
         }
 
-        // Set click listener for logout button
-        logoutButton.setOnClickListener {
-            // Handle logout (implement logout logic)
-            Toast.makeText(this, "Logout clicked", Toast.LENGTH_SHORT).show()
+        observeNewsUpdates()
+    }
+
+    private fun observeNewsUpdates() {
+        newsListener = db.collection("news").addSnapshotListener { snapshots, e ->
+            if (e != null) {
+                Toast.makeText(this, "Gagal memuat berita: ${e.message}", Toast.LENGTH_SHORT).show()
+                return@addSnapshotListener
+            }
+            if (snapshots != null) {
+                newsList.clear()
+                for (document in snapshots) {
+                    val news = document.toObject(News::class.java).copy(id = document.id)
+                    newsList.add(news)
+                }
+                newsAdapter.notifyDataSetChanged()
+            }
         }
     }
 
-    private fun loadNewsArticles() {
-        // Here you can load the news articles from Firestore and display them in the RecyclerView
-        db.collection("news")
-            .get()
-            .addOnSuccessListener { documents ->
-                // Process the documents and update the RecyclerView adapter
-                val newsList = documents.map { document ->
-                    document.toObject(News::class.java) // Assuming your document structure matches the News class
-                }
-                // Update your adapter with the newsList
-                // newsRecyclerView.adapter = NewsAdapter(newsList)
+    private fun deleteNews(news: News) {
+        db.collection("news").document(news.id).delete()
+            .addOnSuccessListener {
+                Toast.makeText(this, "Berita berhasil dihapus", Toast.LENGTH_SHORT).show()
             }
             .addOnFailureListener { e ->
-                Log.w("MainActivity", "Error getting documents: ", e)
-                Toast.makeText(this, "Failed to load news articles", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Gagal menghapus berita: ${e.message}", Toast.LENGTH_SHORT).show()
             }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        newsListener?.remove()
     }
 }
