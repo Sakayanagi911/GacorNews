@@ -1,26 +1,32 @@
 package com.example.gacornews
 
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
-import java.util.UUID
+import com.google.firebase.storage.StorageReference
 
 class UploadActivity : AppCompatActivity() {
 
     private lateinit var titleEditText: EditText
     private lateinit var contentEditText: EditText
     private lateinit var selectImageButton: Button
-    private lateinit var selectedImageView: ImageView
     private lateinit var uploadButton: Button
+    private lateinit var selectedImageView: ImageView
+    private lateinit var backButton: Button // New back button
 
-    private var imageUri: Uri? = null
+    private lateinit var storage: FirebaseStorage
+    private lateinit var firestore: FirebaseFirestore
+    private var selectedImageUri: Uri? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,59 +35,79 @@ class UploadActivity : AppCompatActivity() {
         titleEditText = findViewById(R.id.titleEditText)
         contentEditText = findViewById(R.id.contentEditText)
         selectImageButton = findViewById(R.id.selectImageButton)
-        selectedImageView = findViewById(R.id.selectedImageView)
         uploadButton = findViewById(R.id.uploadButton)
+        selectedImageView = findViewById(R.id.selectedImageView)
+        backButton = findViewById(R.id.backButton) // Initialize back button
+
+        storage = FirebaseStorage.getInstance()
+        firestore = FirebaseFirestore.getInstance()
 
         selectImageButton.setOnClickListener {
-            openGallery()
+            selectImage()
         }
 
         uploadButton.setOnClickListener {
-            uploadNews()
+            uploadNewsArticle()
+        }
+
+        // Set click listener for back button
+        backButton.setOnClickListener {
+            onBackPressed() // Finish the current activity
         }
     }
 
-    private fun openGallery() {
-        val intent = Intent(Intent.ACTION_PICK)
-        intent.type = "image/*"
-        startActivityForResult(intent, REQUEST_CODE_SELECT_IMAGE)
+    private fun selectImage() {
+        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        imagePickerLauncher.launch(intent)
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_CODE_SELECT_IMAGE && resultCode == Activity.RESULT_OK) {
-            imageUri = data?.data
-            selectedImageView.setImageURI(imageUri)
-        }
-    }
-
-    private fun uploadNews() {
-        val title = titleEditText.text.toString().trim()
-        val content = contentEditText.text.toString().trim()
-
-        if (title.isEmpty() || content.isEmpty() || imageUri == null) {
-            Toast.makeText(this, "Harap isi semua kolom dan pilih gambar", Toast.LENGTH_SHORT).show()
-            return
+    private val imagePickerLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                result.data?.data?.let { uri ->
+                    selectedImageUri = uri
+                    selectedImageView.setImageURI(uri)
+                }
+            }
         }
 
-        val storageReference = FirebaseStorage.getInstance().reference.child("news_images/${UUID.randomUUID()}")
+    private fun uploadNewsArticle() {
+        val title = titleEditText.text.toString()
+        val content = contentEditText.text.toString()
 
-        imageUri?.let { uri ->
-            storageReference.putFile(uri)
+        if (title.isNotEmpty() && content.isNotEmpty() && selectedImageUri != null) {
+            val storageRef: StorageReference = storage.reference.child("images/${System.currentTimeMillis()}.jpg")
+
+            Log.d("UploadActivity", "Uploading image to: $storageRef")
+
+            storageRef.putFile(selectedImageUri!!)
                 .addOnSuccessListener { taskSnapshot ->
-                    taskSnapshot.storage.downloadUrl.addOnSuccessListener { downloadUrl ->
-                        // TODO: Save news data to Firebase Database (title, content, image URL)
-                        Toast.makeText(this, "Berita berhasil diupload", Toast.LENGTH_SHORT).show()
-                        finish()
+                    Log.d("UploadActivity", "Image uploaded successfully")
+                    storageRef.downloadUrl.addOnSuccessListener { uri ->
+                        val newsArticle = News(title, content, uri.toString())
+                        uploadToFirestore(newsArticle)
+                    }.addOnFailureListener { e ->
+                        Log.e("UploadActivity", "Failed to get download URL", e)
+                        Toast.makeText(this, "Failed to get image URL", Toast.LENGTH_SHORT).show()
                     }
+                }.addOnFailureListener { e ->
+                    Log.e("UploadActivity", "Failed to upload image", e)
+                    Toast.makeText(this, "Failed to upload image", Toast.LENGTH_SHORT).show()
                 }
-                .addOnFailureListener {
-                    Toast.makeText(this, "Gagal mengupload gambar", Toast.LENGTH_SHORT).show()
-                }
+        } else {
+            Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show()
         }
     }
 
-    companion object {
-        private const val REQUEST_CODE_SELECT_IMAGE = 100
+    private fun uploadToFirestore(newsArticle: News) {
+        firestore.collection("news").add(newsArticle)
+            .addOnSuccessListener {
+                Log.d("UploadActivity", "News article uploaded successfully")
+                Toast.makeText(this, "News article uploaded", Toast.LENGTH_SHORT).show()
+                finish() // Close this activity after successful upload
+            }.addOnFailureListener { e ->
+                Log.e("UploadActivity", "Failed to upload news article", e)
+                Toast.makeText(this, "Failed to upload news article", Toast.LENGTH_SHORT).show()
+            }
     }
 }
