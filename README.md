@@ -6,7 +6,6 @@ Gacor News adalah aplikasi (BELUM JADI) berita sederhana yang memungkinkan pengg
 
 - **Menampilkan Daftar Berita**: Pengguna dapat melihat daftar berita yang diambil dari Firestore.
 - **Menambahkan Berita**: Pengguna dapat menambahkan berita baru lengkap dengan gambar.
-- **Mengedit Berita**: Pengguna dapat mengedit berita yang sudah ada.
 - **Menghapus Berita**: Pengguna dapat menghapus berita yang tidak diinginkan.
 - **Logout**: Pengguna dapat keluar dari aplikasi.
 
