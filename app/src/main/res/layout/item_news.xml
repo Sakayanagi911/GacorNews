@@ -1,58 +1,42 @@
 <!-- res/layout/item_news.xml -->
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
-    android:background="@android:color/white"
-    android:cardCornerRadius="8dp"
-    android:elevation="4dp">
+    app:cardCornerRadius="8dp"
+    app:cardElevation="4dp"
+    android:layout_margin="8dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="8dp">
+        android:padding="16dp">
 
-        <!-- Header Item Berita -->
-        <LinearLayout
-            android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/newsTitle"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:text="Judul Berita"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
-            <ImageView
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:src="@drawable/ic_account_circle" />
+        <TextView
+            android:id="@+id/newsContent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Isi berita..."
+            android:textSize="14sp"
+            android:layout_marginTop="4dp" />
 
-            <TextView
-                android:id="@+id/titleTextView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="Judul Berita"
-                android:textStyle="bold"
-                android:textSize="16sp"
-                android:textColor="@android:color/black" />
-        </LinearLayout>
-
-        <!-- Gambar Berita -->
         <ImageView
-            android:id="@+id/imageView"
+            android:id="@+id/newsImage"
             android:layout_width="match_parent"
             android:layout_height="200dp"
-            android:layout_marginTop="8dp"
-            android:scaleType="centerCrop" />
-
-        <!-- Konten Berita -->
-        <TextView
-            android:id="@+id/contentTextView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Konten berita yang ditampilkan di sini..."
-            android:textSize="14sp"
-            android:textColor="@android:color/black" />
+            android:scaleType="centerCrop"
+            android:layout_marginTop="8dp" />
 
     </LinearLayout>
+
 </androidx.cardview.widget.CardView>

@@ -56,7 +56,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Register"
-        android:backgroundTint="@color/colorPrimary"
         android:textColor="@android:color/white"
         android:layout_marginBottom="16dp" />
 
@@ -66,6 +65,5 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Sudah punya akun? Login"
-        android:textColor="@color/colorPrimary"
         android:textSize="14sp" />
 </LinearLayout>
